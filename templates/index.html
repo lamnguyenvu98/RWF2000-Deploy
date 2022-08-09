@@ -1,0 +1,39 @@
+<html>
+<!-- Upload -->
+<div class="container">
+    <input type="file" accept=".avi .mp4" id="files", enctype="multipart/form-data">
+    <button id="upload-btn">Upload a file</button>
+  </div>
+  <!-- Progress bar -->
+  <div class="container">
+    <progress id="progress-bar" value="0" max="100"></progress><br>
+    <label for="progress-bar">0%</label>
+  </div>
+  
+  <script>
+    const file = document.getElementById('files');
+    const btn = document.getElementById('upload-btn');
+    const progress = document.getElementById('progress-bar');
+
+    btn.addEventListener('click', function(){
+      const userData = file.files[0];
+      const payload = new FormData();
+
+      const socket = new WebSocket("ws://127.0.0.1:8000/inference/predict");
+
+      socket.addEventListener('open', function(event) {
+        event.preventDefault();
+        socket.send(userData);
+      });
+
+      socket.addEventListener('message', function(event) {
+        const data_recv = JSON.parse(event.data);
+        const percentComplete = data_recv['percent_progress'];
+        progress.setAttribute('value', percentComplete);
+        //progress.style.backgroundColor = 'green';
+        progress.nextElementSibling.nextElementSibling.innerText = percentComplete + '%';
+      });
+    });
+
+  </script>
+</html>
