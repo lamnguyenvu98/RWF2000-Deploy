@@ -77,7 +77,6 @@ async def predict(websocket: WebSocket):
                     "percent_progress": ceil(i / data.shape[0] * 100) 
                 })
                 await websocket.send_json(result)
-                break
             cv2.destroyAllWindows()
     except WebSocketDisconnect:
         await websocket.close()
