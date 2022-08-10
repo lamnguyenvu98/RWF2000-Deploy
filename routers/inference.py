@@ -28,7 +28,7 @@ queue = deque(maxlen=65)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-model = FGN()
+model = FGN().to(device)
 
 def prediction(frame):
     if len(queue) <= 0: # At initialization, populate queue with initial frame
@@ -60,7 +60,7 @@ def prediction(frame):
 
 @router.on_event("startup")
 async def load_checkpoint():
-    model.load_from_checkpoint('checkpoints/model.ckpt').to(device)
+    model.load_from_checkpoint('checkpoints/model.ckpt')
 
 
 @router.websocket('/predict')
