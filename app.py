@@ -6,7 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.websockets import WebSocketDisconnect
 import imageio.v3 as iio
 import cv2
-from routers import inference
+from routers import inference, get_video
 import uvicorn
 
 middleware = [
@@ -28,6 +28,7 @@ def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 app.include_router(inference.router)
+app.include_router(get_video.router)
 
 # if __name__ == '__main__':
 #     uvicorn.run(app, port=8000, reload=True)

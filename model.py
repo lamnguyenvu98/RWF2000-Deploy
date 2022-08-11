@@ -1,10 +1,10 @@
-from turtle import forward
 import torch
 import torch.nn as nn
 import torchmetrics
 from pytorch_lightning import LightningModule
 from neptune.new.types import File
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 class ConfusionMatrix():
   def __init__(self, num_classes=2):
@@ -16,7 +16,6 @@ class ConfusionMatrix():
     self.result = result.detach().cpu().numpy()
   
   def _plot(self):
-    import seaborn as sns
     sns.heatmap(self.result, annot=True, fmt='g')
 
 class AttentionMechanism(nn.Module):

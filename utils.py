@@ -1,5 +1,8 @@
+from typing import List
 import cv2
 import numpy as np
+import boto3
+import imageio as iio
 
 def getOpticalFlow(video):
     """Calculate dense optical flow of input video
@@ -87,3 +90,41 @@ def preprocessing(frames, dynamic_crop=False):
         return crop_rs
     
     return result
+
+def s3_read(bucket, filename):
+    s3 = boto3.client('s3')
+    key = filename
+    print("Requesting object from Bucket: {} and Key: {}".format(bucket, key))
+    obj = s3.get_object(Bucket=bucket, Key=key)
+    print("Got object from S3")
+    return obj['Body'].read()
+
+def write_video_s3(bucket: str, filename: str, list_of_frames: List[np.ndarray], extension: str = ".mp4"):
+    filename = filename + extension
+    vid = np.stack([x for x in list_of_frames])
+    encoded = iio.v3.imwrite("<bytes>", vid, extension=extension, plugin="pyav", fps=30, codec="h264")
+    s3 = boto3.client('s3')
+    s3.put_object(Bucket = bucket, Key = filename, Body = encoded)
+    print('Put file "{}" to bucket "{}" succesful'.format(bucket, filename))
+
+if __name__ == '__main__':
+    # s3_read("rwf2000-bucket", "arrest.mp4")
+    # s3 = boto3.client('s3')
+    # url = s3.generate_presigned_url( ClientMethod='get_object', Params={ 'Bucket': "rwf2000-bucket", 'Key': "arrest.mp4" } )
+    
+    video_path = '/home/pep/drive/PCLOUD/Dataset/UCFCrime2Local/video-data/Arrest002_x264.mp4'
+
+    vid = []
+    
+    for idx, frame in enumerate(iio.imiter(video_path)):
+        vid.append(frame)
+    
+
+    write_video_s3(bucket="rwf2000-bucket", filename="test_videos/arrest002_x264",
+                   list_of_frames=vid, extension=".mp4")
+    
+    ######### WEBCAM #######################
+    # for idx, frame in enumerate(iio.imiter("<video0>")):
+    #     print(frame.shape)
+    #     break
+

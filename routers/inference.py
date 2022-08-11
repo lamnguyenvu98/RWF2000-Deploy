@@ -10,7 +10,9 @@ from torchvision import transforms
 from datasets.augmentation import Normalize, ToTensor
 from utils import preprocessing
 from copy import deepcopy
-import base64
+from utils import write_video_s3
+
+BUCKET = "rwf2000-bucket"
 
 router = APIRouter(
     prefix='/inference',
@@ -47,21 +49,18 @@ def prediction(frame):
     
     label = classnames[best_idx]
     text = "{}: {:.1f}".format(label, score)
-    # show_frame = queue.copy().pop()
-    # show_frame = cv2.putText(show_frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
-    # buffer = cv2.imencode('.jpg', show_frame)[1]
-    # jpg_as_text = base64.b64encode(buffer)
+    show_frame = queue.copy().pop()
+    show_frame = cv2.putText(show_frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
+
     result = {
         "prob": score,
         "label": label,
-        # "frames": jpg_as_text
     }
-    return result
+    return result, show_frame
 
 @router.on_event("startup")
 async def load_checkpoint():
     model.load_from_checkpoint('checkpoints/model.ckpt')
-
 
 @router.websocket('/predict')
 async def predict(websocket: WebSocket):
@@ -70,13 +69,16 @@ async def predict(websocket: WebSocket):
         while True:
             data = await websocket.receive_bytes()
             data = iio.imread(data, index=None, extension='.avi')
-
+            vid = []
             for i in range(data.shape[0]):
-                result = prediction(frame=data[i])
+                result, frame = prediction(frame=data[i])
                 result.update({ 
-                    "percent_progress": ceil(i / data.shape[0] * 100) 
+                    "percent_progress": ceil(i / data.shape[0] * 100),
+                    "frame_idx": i
                 })
+                vid.append(frame)
+                write_video_s3(bucket=BUCKET, filename="test_videos/test", list_of_frames=vid)
                 await websocket.send_json(result)
-            cv2.destroyAllWindows()
+
     except WebSocketDisconnect:
         await websocket.close()

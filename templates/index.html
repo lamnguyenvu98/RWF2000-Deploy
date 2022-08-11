@@ -9,21 +9,31 @@
     <progress id="progress-bar" value="0" max="100"></progress><br>
     <label for="progress-bar">0%</label>
   </div>
+  <div class="video-container">
+  <video width="320" height="240" controls muted="muted">
+    <source id="video_here" type="video/mp4" src="http://127.0.0.1:8000/video/result"/>
+  </video>
+  </div>
   
   <script>
     const file = document.getElementById('files');
     const btn = document.getElementById('upload-btn');
     const progress = document.getElementById('progress-bar');
+    const putvideo = document.getElementById('video_here')
 
     btn.addEventListener('click', function(){
       const userData = file.files[0];
-      const payload = new FormData();
 
       const socket = new WebSocket("ws://127.0.0.1:8000/inference/predict");
 
       socket.addEventListener('open', function(event) {
         event.preventDefault();
-        socket.send(userData);
+        if (!(userData === undefined)) {
+          socket.send(userData);
+        }
+        else {
+          console.log("Data undefined")
+        }
       });
 
       socket.addEventListener('message', function(event) {
@@ -32,6 +42,9 @@
         progress.setAttribute('value', percentComplete);
         //progress.style.backgroundColor = 'green';
         progress.nextElementSibling.nextElementSibling.innerText = percentComplete + '%';
+        if (parseInt(percentComplete) == 100) {
+          putvideo.setAttribute('src', 'http://127.0.0.1:8000/video/result')
+        }
       });
     });
 
