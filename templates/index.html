@@ -1,7 +1,8 @@
 <html>
 <!-- Upload -->
 <div class="container">
-    <input type="file" accept=".avi .mp4" id="files", enctype="multipart/form-data">
+    <p id="file_empty">Choose your file to upload</p>
+    <input type="file" accept=".avi .mp4" id="file-upload", enctype="multipart/form-data">
     <button id="upload-btn">Upload a file</button>
   </div>
   <!-- Progress bar -->
@@ -16,36 +17,106 @@
   </div>
   
   <script>
-    const file = document.getElementById('files');
+    const warning = document.getElementById('file_empty');
+    const file = document.getElementById('file-upload');
     const btn = document.getElementById('upload-btn');
     const progress = document.getElementById('progress-bar');
-    const putvideo = document.getElementById('video_here')
+    const putvideo = document.getElementById('video_here');
+    
+      ///////////////////// Functions //////////////////////////////////
 
-    btn.addEventListener('click', function(){
-      const userData = file.files[0];
+    function connect() {
+      return new Promise((resolve, reject) => {
+        const server = new WebSocket("ws://127.0.0.1:8000/inference/predict");
+        server.onopen = () => {
+          resolve(server);
+        };
+        server.onerror = (err) => {
+          console.log(err);
+          reject(err);
+        }
+      })
+    }
 
-      const socket = new WebSocket("ws://127.0.0.1:8000/inference/predict");
-
-      socket.addEventListener('open', function(event) {
-        event.preventDefault();
+    function checkData(userData) {
+      return new Promise((resolve, reject) => {
         if (!(userData === undefined)) {
-          socket.send(userData);
+          resolve('Data is good...');
         }
         else {
-          console.log("Data undefined")
-        }
-      });
+          reject(userData);
+        } 
+      })
+    }
 
-      socket.addEventListener('message', function(event) {
-        const data_recv = JSON.parse(event.data);
-        const percentComplete = data_recv['percent_progress'];
-        progress.setAttribute('value', percentComplete);
-        //progress.style.backgroundColor = 'green';
-        progress.nextElementSibling.nextElementSibling.innerText = percentComplete + '%';
-        if (parseInt(percentComplete) == 100) {
-          putvideo.setAttribute('src', 'http://127.0.0.1:8000/video/result')
-        }
+    function checkResponseData(server) {
+      return new Promise((resolve, reject) => {
+          server.onmessage = (event) => {
+            if (event.data === 'OK') resolve("Server has received data...");
+            else reject("Server hasn't received any data");
+          }
       });
+    }
+
+    function progress_bar_update(server, progress) {
+      return new Promise((resolve, reject) => {
+        server.onmessage = (event) => {
+          if (!(event.data === undefined)) {
+            const data_recv = JSON.parse(event.data);
+            const frame_idx = data_recv['frame_idx'];
+            const total_frame = data_recv['total_frame'];
+            percentComplete = Math.ceil(frame_idx / total_frame * 100);
+            progress.setAttribute('value', percentComplete);
+            progress.nextElementSibling.nextElementSibling.innerText = percentComplete + '%';
+            resolve("Updating ProgressBar");
+          }
+          else {
+            reject("Something wrong " + event.data);
+          }
+        }
+      })
+    }
+
+      //   if (parseInt(percentComplete) == 100) {
+      //     putvideo.setAttribute('src', 'http://127.0.0.1:8000/video/result')
+      //   }
+      // });
+
+
+    btn.addEventListener('click', function(){
+      async function doWork(userData, filename) {
+        try {
+          const dataValid = await checkData(userData);
+          console.log(dataValid);
+          warning.innerHTML = "Selected one video";
+          warning.style.color = "green";
+          const server = await connect();
+
+          const name = filename[0];
+          const ext = filename[1];
+          
+          console.log(userData);
+
+          info = {'name': name, 'ext': ext};
+          await server.send(JSON.stringify(info));
+          await server.send(userData);
+          const dataRecv = await checkResponseData(server);
+          console.log(dataRecv);
+          const prograssbarStatus = await progress_bar_update(server, progress);
+          console.log(prograssbarStatus);
+        } catch (err){
+          if (err === undefined) {
+            warning.innerHTML = "You haven't selected any files to upload!";
+            warning.style.color = "red";
+          }
+          console.log(err)
+          }
+      }
+
+      const userData = file.files[0];
+      const filename = file.value.split("\\").at(-1);
+      name, ext = filename.split(".");
+      doWork(userData, filename.split("."));
     });
 
   </script>

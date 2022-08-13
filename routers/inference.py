@@ -1,8 +1,9 @@
 import asyncio
+from typing import List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, BackgroundTasks
 import imageio.v3 as iio
 import cv2
-from math import ceil
+import numpy as np
 from model import FGN
 import torch
 from collections import deque
@@ -11,6 +12,8 @@ from datasets.augmentation import Normalize, ToTensor
 from utils import preprocessing
 from copy import deepcopy
 from utils import write_video_s3
+from io import BytesIO
+import json
 
 BUCKET = "rwf2000-bucket"
 
@@ -30,9 +33,9 @@ queue = deque(maxlen=65)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-model = FGN().to(device)
+model = FGN().load_from_checkpoint('checkpoints/model.ckpt').to(device)
 
-def prediction(frame):
+async def prediction(frame):
     if len(queue) <= 0: # At initialization, populate queue with initial frame
         for _ in range(64):
             queue.append(frame)
@@ -52,33 +55,41 @@ def prediction(frame):
     show_frame = queue.copy().pop()
     show_frame = cv2.putText(show_frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
 
-    result = {
-        "prob": score,
-        "label": label,
-    }
-    return result, show_frame
+    # result = {
+    #     "prob": score,
+    #     "label": label,
+    # }
+    return show_frame
 
-@router.on_event("startup")
-async def load_checkpoint():
-    model.load_from_checkpoint('checkpoints/model.ckpt')
+async def predict_videos(data: np.ndarray, websocket: WebSocket) -> List[np.ndarray]:
+    vid = []
+    for i in range(data.shape[0]):
+        # frame = await prediction(frame=data[i])
+        frame = data[i]
+        vid.append(frame)
+        result = { 
+            "frame_idx": i,
+            "total_frame": data.shape[0],
+            "is_finished": False
+        }
+        await websocket.send_json(result)
+    return vid
 
 @router.websocket('/predict')
-async def predict(websocket: WebSocket):
+async def predict(websocket: WebSocket, background_task: BackgroundTasks) -> None:
     await websocket.accept()
     try:
         while True:
+            info = await websocket.receive_json()
             data = await websocket.receive_bytes()
-            data = iio.imread(data, index=None, extension='.avi')
-            vid = []
-            for i in range(data.shape[0]):
-                result, frame = prediction(frame=data[i])
-                result.update({ 
-                    "percent_progress": ceil(i / data.shape[0] * 100),
-                    "frame_idx": i
-                })
-                vid.append(frame)
-                write_video_s3(bucket=BUCKET, filename="test_videos/test", list_of_frames=vid)
-                await websocket.send_json(result)
+            
+            # data = iio.imread(data, index=None, extension='.avi')
+            # res_data = 'OK' if data is not None else 'FAILED'
+            # print(res_data)
+            # await websocket.send_text(res_data)
+            # vid = await predict_videos(data, websocket)
+            # background_task.add_task(write_video_s3, BUCKET, "test_videos/test", vid, ".mp4")
+            # await write_video_s3(bucket=BUCKET, filename="test_videos/test", list_of_frames=vid)
 
     except WebSocketDisconnect:
         await websocket.close()

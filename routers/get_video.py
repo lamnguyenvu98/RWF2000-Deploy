@@ -20,6 +20,8 @@ router = APIRouter(
 @router.get("/result")
 async def result(request: Request):
     data = s3_read(BUCKET, "test_videos/arrest002_x264.mp4")
-    with open("/home/pep/Videos/test.mp4", "wb") as f:
-        f.write(data)
     return StreamingResponse(BytesIO(data), media_type="video/mp4")
+
+@router.get("/success_s3")
+async def success_s3():
+    pass
