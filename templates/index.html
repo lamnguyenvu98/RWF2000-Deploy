@@ -10,19 +10,27 @@
     <progress id="progress-bar" value="0" max="100"></progress><br>
     <label for="progress-bar">0%</label>
   </div>
-  <div class="video-container">
+
+  <div>
+    <img id="frame" src="">
+    <div id="result"></div>
+  </div>
+
+  <!-- <div class="video-container">
   <video width="320" height="240" controls muted="muted">
     <source id="video_here" type="video/mp4"/>
   </video>
-  </div>
+  </div> -->
   
   <script>
     const warning = document.getElementById('file_empty');
-    const file = document.getElementById('file-upload');
+    const fileup = document.getElementById('file-upload');
     const btn = document.getElementById('upload-btn');
     const progress = document.getElementById('progress-bar');
     const putvideo = document.getElementById('video_here');
-    
+    const img = document.getElementById('frame');
+    const result = document.getElementById('result');
+
       ///////////////////// Functions //////////////////////////////////
 
     function connect() {
@@ -41,10 +49,16 @@
     function checkData(userData) {
       return new Promise((resolve, reject) => {
         if (!(userData === undefined)) {
+          console.log(userData);
+          warning.innerHTML = "Selected one video";
+          warning.style.color = "green";
           resolve('Data is good...');
         }
         else {
-          reject(userData);
+          console.log(userData)
+          warning.innerHTML = "You haven't selected any files to upload!";
+          warning.style.color = "red";
+          reject("Data is empty...");
         } 
       })
     }
@@ -82,14 +96,32 @@
       //   }
       // });
 
+    async function displayFrameInfo(server, img, result) {
+      img.onload = () => {
+        URL.revokeObjectURL(this.src);
+      }
+      server.onmessage = (event) => {
+        if (typeof(event.data) === 'string') {
+          const data_recv = JSON.parse(event.data);
+          const frame_idx = data_recv['frame_idx'];
+          const total_frame = data_recv['total_frame'];
+          percentComplete = Math.ceil(frame_idx / total_frame * 100);
+          progress.setAttribute('value', percentComplete);
+          progress.nextElementSibling.nextElementSibling.innerText = percentComplete + '%';
+          result.innerHTML = frame_idx;
 
-    btn.addEventListener('click', function(){
-      async function doWork(userData, filename) {
+        }
+        else {
+          img.src = URL.createObjectURL(event.data);
+        }
+      }
+
+    }
+
+    async function doWork(userData, filename, img, result) {
         try {
           const dataValid = await checkData(userData);
-          console.log(dataValid);
-          warning.innerHTML = "Selected one video";
-          warning.style.color = "green";
+
           const server = await connect();
 
           const name = filename[0];
@@ -102,21 +134,18 @@
           await server.send(userData);
           const dataRecv = await checkResponseData(server);
           console.log(dataRecv);
-          const prograssbarStatus = await progress_bar_update(server, progress);
-          console.log(prograssbarStatus);
+          // const prograssbarStatus = await progress_bar_update(server, progress);
+          await displayFrameInfo(server, img, result);
+          // console.log(prograssbarStatus);
         } catch (err){
-          if (err === undefined) {
-            warning.innerHTML = "You haven't selected any files to upload!";
-            warning.style.color = "red";
-          }
           console.log(err)
           }
       }
 
-      const userData = file.files[0];
-      const filename = file.value.split("\\").at(-1);
-      name, ext = filename.split(".");
-      doWork(userData, filename.split("."));
+    btn.addEventListener('click', function() {
+      const userData = fileup.files[0];
+      const filename = fileup.value.split("\\").at(-1);
+      doWork(userData, filename.split("."), img, result);
     });
 
   </script>

@@ -4,6 +4,7 @@ aiosignal==1.2.0
 anyio==3.6.1
 async-timeout==4.0.2
 attrs==22.1.0
+av==9.2.0
 boto3==1.24.48
 botocore==1.27.48
 bravado==11.0.3
@@ -12,8 +13,10 @@ cachetools==5.2.0
 certifi==2022.6.15
 charset-normalizer==2.1.0
 click==8.1.3
+cycler==0.11.0
 dotmap==1.3.30
 fastapi==0.79.0
+fonttools==4.35.0
 frozenlist==1.3.1
 fsspec==2022.7.1
 future==0.18.2
@@ -25,13 +28,17 @@ grpcio==1.47.0
 h11==0.13.0
 idna==3.3
 imageio==2.21.1
+imageio-ffmpeg==0.4.7
 importlib-metadata==4.12.0
+Jinja2==3.1.2
 jmespath==1.0.1
 jsonpointer==2.3
 jsonref==0.2
 jsonschema==3.2.0
+kiwisolver==1.4.4
 Markdown==3.4.1
 MarkupSafe==2.1.1
+matplotlib==3.5.3
 monotonic==1.6
 msgpack==1.0.4
 multidict==6.0.2
@@ -61,6 +68,8 @@ requests-oauthlib==1.3.1
 rfc3987==1.3.8
 rsa==4.9
 s3transfer==0.6.0
+scipy==1.9.0
+seaborn==0.11.2
 simplejson==3.17.6
 six==1.16.0
 smmap==5.0.0
