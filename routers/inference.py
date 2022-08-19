@@ -79,15 +79,15 @@ async def prediction(frame):
     
     label = classnames[best_idx]
     text = "{}: {:.1f}".format(label, score)
-    # show_frame = queue.copy().pop()
-    # show_frame = cv2.putText(show_frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
+    show_frame = queue.copy().pop()
+    show_frame = cv2.putText(show_frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
 
     result = {
         "fight": pred_prob[0],
         "nonfight": pred_prob[1],
         "best_class": label,
     }
-    return result
+    return result, show_frame
 
 # def preprocessing_step(frame_lst):
 #     frame = frame_lst.astype(dtype=np.float32)
@@ -118,8 +118,8 @@ async def predict_videos(data: np.ndarray, websocket: WebSocket) -> List[np.ndar
     vid = []
     for i in range(data.shape[0]):
         result = {}
-        # result = await prediction(frame=data[i])
-        frame = data[i]
+        result, frame = await prediction(frame=data[i])
+        # frame = data[i]
         _, buffer = cv2.imencode(".jpg", frame)
         # vid.append(frame)
         result.update({ 
