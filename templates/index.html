@@ -1,6 +1,7 @@
 <html>
 <!-- Upload -->
 <div class="container">
+    <h2>Your ID: <span id="ws-id"></span></h2>
     <p id="file_empty">Choose your file to upload</p>
     <input type="file" accept=".avi .mp4" id="file-upload", enctype="multipart/form-data">
     <button id="upload-btn">Upload a file</button>
@@ -35,7 +36,9 @@
 
     function connect() {
       return new Promise((resolve, reject) => {
-        const server = new WebSocket("ws://127.0.0.1:8000/inference/predict");
+        var client_id = Date.now()
+        document.querySelector("#ws-id").textContent = client_id;
+        const server = new WebSocket(`ws://127.0.0.1:8000/inference/predict/${client_id}`);
         server.onopen = () => {
           resolve(server);
         };
@@ -63,14 +66,13 @@
       })
     }
 
-    function checkResponseData(server) {
-      return new Promise((resolve, reject) => {
-          server.onmessage = (event) => {
-            if (event.data === 'OK') resolve("Server has received data...");
-            else reject("Server hasn't received any data");
-          }
-      });
-    }
+    // async function checkResponseData(server) {
+    //   return new Promise((resolve, reject) => {
+    //     server.onmessage = (event) => {
+    //       resolve(event.data);
+    //     };
+    //   })
+    // }
 
     function progress_bar_update(server, progress) {
       return new Promise((resolve, reject) => {
@@ -118,7 +120,7 @@
 
     }
 
-    async function doWork(userData, filename, img, result) {
+    async function doWork(userData, filename, img, result_text) {
         try {
           const dataValid = await checkData(userData);
 
@@ -132,10 +134,10 @@
           info = {'name': name, 'ext': ext};
           await server.send(JSON.stringify(info));
           await server.send(userData);
-          const dataRecv = await checkResponseData(server);
-          console.log(dataRecv);
+          // const dataRecv = await checkResponseData(server);
+          // result_text.innerHTML = dataRecv
           // const prograssbarStatus = await progress_bar_update(server, progress);
-          await displayFrameInfo(server, img, result);
+          await displayFrameInfo(server, img, result_text);
           // console.log(prograssbarStatus);
         } catch (err){
           console.log(err)
